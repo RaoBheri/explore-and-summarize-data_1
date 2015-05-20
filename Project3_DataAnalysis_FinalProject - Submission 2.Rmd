@@ -1,0 +1,445 @@
+Red Wine Quality Data Analysis by Rao Bheri
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# List of packages used in this analysis
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+
+
+library(ggplot2)
+library (gridExtra)
+library(GGally)
+
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the redwine csv file from desktop
+setwd("D:/Users/A27SYAT/Documents/Udacity/Data Analysis - Project 3/Final Project")
+redwine<-read.csv('wineQualityReds.csv')
+
+```
+
+# Univariate Plots Section
+
+I used [Red Wine Quality](https://s3.amazonaws.com/udacity-hosted-downloads/ud651/wineQualityReds.csv) analysis data  for this project. Here is the summary about redwine data.
+
+Names of attributes:
+
+```{r echo=FALSE, Univariate_names}
+
+names(redwine)
+
+```
+
+Number of rows and attributes:
+
+```{r echo=FALSE, Univariate_dim}
+
+dim(redwine)
+
+```
+
+Summary statistics:
+
+```{r echo=FALSE, Univariate_summary}
+
+summary(redwine)
+
+```
+
+Sample data:
+
+```{r echo=FALSE, Univariate_sample_data}
+
+str(redwine)
+
+```
+
+Observations on data:
+
+1. X is the unique row identifier.
+
+2. quality values are integers with ranges from 3 to 8. 1st and 3rd quartile values are 5 and 6 respectively, which tells that we have most data for 5 and 6 quality values.
+
+3. For both free.sulpfur.dioxide and total.sulfur.dioxide, max value ranges are very bigger compared to 3rd quartile. Need to watch for outliers.
+
+4. chlorides & residual.sugar max values are very bigger compared to their 3rd quartile value.
+
+5. pH mean and median are almost same with value approximately 3.3. Need to verify whether data is normally distributed using histogram.
+
+# Univariate Analysis
+
+Above data shows mean, median, 1st, 3rd quartile,min & max values for different redwine attributes. Now, let us look at histograms to see which attributes are normally distributed and obvious outliers.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Histograms, fig.width=10, fig.height=15}
+#Create histograms to understand few of the attributes
+p1 <- ggplot( aes(x = fixed.acidity), data = redwine) + geom_histogram() +
+      ggtitle ("fixed.acidity count")
+
+p2 <- ggplot( aes(x = volatile.acidity), data = redwine) + geom_histogram() +
+      ggtitle ("volatile.acidity count")
+
+p3 <- ggplot( aes(x = citric.acid), data = redwine) + geom_histogram() +
+      ggtitle ("citric.acid count")
+
+p4 <- ggplot( aes(x = residual.sugar), data = redwine) + geom_histogram() +
+      ggtitle ("residual.sugar count")
+
+p5 <- ggplot( aes(x = chlorides), data = redwine) + geom_histogram() +
+      ggtitle ("chlorides count")
+
+p6 <- ggplot( aes(x = free.sulfur.dioxide),data = redwine) + geom_histogram() +
+      ggtitle ("free.sulfur.dioxide count")
+
+p7 <- ggplot( aes(x = total.sulfur.dioxide), data = redwine) +
+      geom_histogram() + ggtitle ("total.sulfur.dioxide count")
+
+p8 <- ggplot( aes(x = density), data = redwine) +
+      geom_histogram() + ggtitle ("density count")
+
+p9 <- ggplot( aes(x = pH), data = redwine) + geom_histogram() +
+      ggtitle ("pH count")
+
+p10 <- ggplot( aes(x = sulphates), data = redwine) + geom_histogram() +
+      ggtitle ("sulphates count")
+
+
+p11 <- ggplot( aes(x = alcohol), data = redwine) + geom_histogram() +
+      ggtitle ("alcohol count")
+
+p12 <- ggplot( aes(x = factor(quality)), data = redwine) + geom_histogram() +
+      ggtitle ("Quality count")
+
+
+grid.arrange(p1,p2,p3,p4,p5, p6, p7,p8,p9,p10,p11,p12, ncol=2)
+
+```
+
+
+
+Observation from above charts:
+
+1. We have less sample data for quality values 3,4, & 8. 
+   
+2. It is interesting to see few spikes in  free sulfur, residual sugar and alcohol  charts.
+
+3.  pH is normally distributed with range between 2.5 and 4.0 .  
+
+4. density is normally distributed with range between 0.9901 and 1.0037.
+
+5. residual sugar, sulphates & total sulfur dioxide have some outliers.
+
+### Correlation data for y=quality (pearson method)
+
+```{r echo=FALSE, correlation_data}
+#Create histograms to understand few of the attributes
+
+cor(x=redwine[,!names(redwine) %in% c("X","quality")], y=redwine$quality)
+
+```
+
+### What is the structure of your dataset?
+Data is there for 1599 red wines with 12 attributes(fixed.acidity,volatile.acidity,
+citric.acid,residual.sugar,chlorides,free.sulfur.dioxide,total.sulfur.dioxide,
+density,pH,sulphates,alcohol,quality)
+
+### What is/are the main feature(s) of interest in your dataset?
+Quality is the main feature of interest.
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+I think, Alcohol and  volatile.acidity will help support my investigation as their correlation values are higher (closer to +1/-1) for quality.
+
+### Did you create any new variables from existing variables in the dataset?
+Yes. I created cut_quality variable to group the quality values. More details in below sections.
+
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+Yes. total.sulfur.dioxide's 3rd quartile value is much smaller compared to Max value. Let us look at total.sulfur.dioxide histogram to confirm obvious outliers.
+
+```{r echo=FALSE, data_cleansing}
+#Zooming the total.sulfur.dioxide histogram
+ggplot( aes(x = total.sulfur.dioxide), data = redwine) +
+      geom_histogram() + ggtitle ("total.sulfur.dioxide count")
+
+#Based on the histograms , I found that we have obvious outliers. 
+#So, removing outliers as part of data cleansing.
+#This dataset is used for most of the analysis
+redwine_cleansed <- subset(redwine, total.sulfur.dioxide < 250)
+
+
+```
+
+Also, based on above histograms,   I confirmed that we have 2 outliers for total.sulfur.dioxide. I removed those 2 outliers. New cleansed data set is created. We will be using this new data set for rest of the analysis.
+
+
+# Bivariate Plots Section
+Now it is time to identify the relationship between different attributes of red wine to quality. ggpairs will be a good start followed by individual comparisons of 2 attributes.
+
+
+```{r echo=FALSE, Bivariate_ggpair_Plots, fig.width=20, fig.height=15}
+
+#prepare the data for ggpairs charts 
+set.seed(1000)
+redwine_cleansed_subset <- redwine_cleansed [,!names(redwine_cleansed) %in% c("X")]
+
+ggpairs(redwine_cleansed_subset[sample.int(nrow(redwine_cleansed_subset),90),])
+
+```
+
+
+We can make many interesting observations using above chart. We can observe that in below analysis.
+
+ggpairs chart above show chlorides have few exceptions. Want to take a close look at impact on quality due to chlorides without outliers.
+
+```{r echo=FALSE, Bivariate_chlorides_Plots}
+
+#Remove the outliers. This data is used just once.
+redwine_cleansed_chlorides <- subset(redwine_cleansed, chlorides < 0.2)
+
+# Want to see impact of chlorides on quality without outliers 
+
+ggplot(aes(x =as.factor(quality), y = chlorides) ,
+  data = subset(redwine_cleansed, chlorides < 0.2)) +
+  geom_boxplot() +ggtitle("chlorides Boxplot by Quality without outliers")  
+```
+
+By looking at the medians in above chart, it seems, quality is getting better with lower chlorides. But, it is not a strong relation.
+
+
+Based on correlation data, volatile.acidity , sulphates and alcohol seems to have impact on quality. Let us take a look at them through box plots.
+
+
+```{r echo=FALSE, Bivariate_BoxPlots}
+
+#attributes that are of interest based on correlation data 
+ggplot(aes(x = as.factor(quality), y = volatile.acidity ),
+       data = redwine_cleansed) +
+  geom_boxplot() +ggtitle("volatile.acidity Boxplot by Quality ")  
+
+ggplot(aes(x = as.factor(quality), y = sulphates ), 
+       data = redwine_cleansed) +
+  geom_boxplot() +ggtitle("sulphates Boxplot by Quality ")  
+
+#Impact of citric acid  on quality using boxplot
+ggplot(aes(x = as.factor(quality), y =citric.acid  ), data = redwine_cleansed) +
+  geom_boxplot() +ggtitle("citric.acid Boxplot by Quality ")  
+
+
+#Impact of alcohol  on quality using boxplot
+ggplot(aes(x = chlorides, y = alcohol ), data = redwine_cleansed) +
+  geom_point() +ggtitle("Alcohol scatter plot by chlorides")  
+```
+
+Above  charts show the following:
+
+1. When volatile.acidity is low, quality is high.
+
+2. When sulphates is high, quality is high.
+
+3. when citric acid is high, quality is high.
+
+4. When chlorides is high, alcohol is low.
+
+I'm personally interested in how density plays a role in quality.
+
+```{r echo=FALSE, Bivariate_density_Plots}
+
+#Impact of density  on alcohol
+ggplot(aes(x = as.factor(quality), y =density ), data = redwine_cleansed) +
+  geom_boxplot() +ggtitle("Density Boxplot by Quality")  
+
+```
+
+Based on above chart, lower the density, better the quality.
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+Based on ggpairs charts and correlation value, Quality is better when
+
+1. alcohol is high
+2. volatile.acidity is low
+3. citric acid is high
+4. sulphate is high
+
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+1. Sugar has no impact on quality ( correlation test value of -0.0637 and ggpairs chart show this)
+2. In ggplot, observed that free.sulfur.dioxide and total.sulfur.dioxide have linear relation
+3. Chlorides seems to have less impact on Quality (close to 0 correlation test value)
+4. When Chlorides is high, Alcohol is low
+5. When Density is low, Quality seems to be high
+
+
+### What was the strongest relationship you found?
+Alcohol has strong relation to quality. Correlation test value confirms this strong relation. Based on the charts, I confirm that higher the alcohol, then higher the quality. 
+
+
+# Multivariate Plots Section
+
+Let us take a look at charts with more than 2 variables.  At first, let us see the relation between alcohol, volatile.acidity and quality.
+
+```{r echo=FALSE, Multivariate_volatile_alcohol_Plots}
+
+#Impact of alcohol and volatile.acidity on quality
+ggplot(aes(x = alcohol, y = volatile.acidity, color = quality),
+          data = redwine_cleansed) + 
+  geom_point(alpha = 1/2, size = 4) +  facet_wrap(~quality, ncol =3) +
+  ggtitle("Impact of volatile.acidity vs alcohol on quality")
+
+table(redwine_cleansed$quality)
+
+redwine_cleansed$cut_quality <- cut(redwine_cleansed$quality,breaks=c(2,4,6,8))
+
+table(redwine_cleansed$cut_quality)
+```
+
+Higher volatile.acidity resulting in low alcohol and low quality. 
+
+Now, let us take a look at relation between citric.acid, pH and quality.
+
+```{r echo=FALSE, Multivariate_citric_pH_Plots}
+
+# Multi variable comparison between citric acid,pH and quality
+#with 99% percentile citric acid data
+
+ggplot(aes(x = pH, y = citric.acid, color = quality),data = redwine_cleansed) +
+  geom_point(alpha = 1/2, size = 4) +  facet_wrap(~quality, ncol =3) +
+  coord_cartesian(ylim=c(quantile(redwine_cleansed$citric.acid,.01),
+                         quantile(redwine_cleansed$citric.acid,.99))) +
+  ggtitle("Impact of pH and citric acid on quality")
+```
+
+High pH resulting in lower citric acid. Medium ctric acid seems to have better quality.
+
+Now, let us take a look at relation between alcohol, total.sulfur.dioxide and quality.
+
+```{r echo=FALSE, Multivariate_totalsulphur_alcohol_Plots}
+
+ggplot(data = redwine_cleansed, aes(x = alcohol, y = total.sulfur.dioxide)) +
+  geom_point(alpha=1/3,size=4,aes( colour=quality)) + 
+  facet_wrap(~quality, ncol =3) +
+  ggtitle("Impact of alcohol and total.sulfur.dioxide on quality")
+```
+
+total.sulfur.dioxide seems to have less impact on alcohol. But, when alcohol is high, quality is better.
+
+Now, let us take a look at relation between alcohol, sulphates and quality. Let us ignore top & low 1% quantile of sulphates.
+
+```{r echo=FALSE, Multivariate_sulphates_alcohol_Plots}
+
+ggplot(data = redwine_cleansed,aes(x = alcohol, y = sulphates,color=quality)) +
+  geom_point(alpha=1/3,size=4) +
+  facet_wrap(~quality, ncol =3) +
+  coord_cartesian(ylim=c(quantile(redwine_cleansed$sulphates,.01),
+                         quantile(redwine_cleansed$sulphates,.99))) +
+  ggtitle("Impact of alcohol and sulphates on quality")
+
+
+```
+
+sulphates has less impact on alcohol. But, Low sulphates resulting in less quality.
+
+
+# Multivariate Analysis
+Graphs show that there is strong relation between alcohol and quality. Also, they show multiple attributes dependencies, which we discuss in detail below.
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+1. Low  volatile.acidity and high alcohol resulting in better red wine quality.
+
+2. When pH is getting higher, citric.acid is getting lower. They have negative linear relation. Low  PH, medium citric acid resulting in higher red wine quality.
+
+3. Lower total.sulfur.dioxide is slightly influencing better quality.
+
+4. sulphates has less impact on alcohol. But, Low sulphates resulting in less  quality 
+
+### Were there any interesting or surprising interactions between features?
+4th point above is interesting. 2nd point above is obvious, but interesting to prove it.
+
+
+
+------
+
+# Final Plots and Summary
+
+### Impact of Alcohol on Quality
+```{r echo=FALSE, Alcohol_vs_Quality}
+ggplot(data=redwine_cleansed, aes(x=factor(quality), y=alcohol)) +
+  geom_boxplot(aes(fill=factor(quality)))  +
+  geom_smooth(method='lm',aes(group = 1), colour="red") +
+  xlab("Quality (score between 0 and 10)") +
+  ylab("Alcohol (% by volume)")  +
+  ggtitle("Alcohol by Quality") 
+
+```
+
+### Description
+Median of Alcohol is below 10 for Quality values 3 & 5. Median is above 12 for quality=8. 
+
+Except the outliers of Quality=5, Quality is better when Alcohol is higher. We can observe the same from above boxplots.
+ 
+
+### Impact of Volatile Acidity on Quality
+```{r echo=FALSE, Volatile_Acidity_vs_Quality}
+ggplot(aes(x = quality, y = volatile.acidity), data = redwine_cleansed) +
+  geom_boxplot(aes(fill=factor(quality))) +
+  geom_smooth(method='lm',aes(group = 1), colour="red") +
+  xlab("Quality (score between 0 and 10)")  +
+  ylab("volatile acidity (acetic acid - g / dm^3)") +
+  ggtitle("Volatile Acidity by Quality")   
+
+```
+
+### Description
+Linear regression line is showing with higher quality, when volatile acidity is getting lower.
+
+From google, I found that Volatile Acidity is used to increase the aroma of wine. But,
+as we can seen in the above chart, it impacts the quality if used in excessive.
+
+
+
+### Impact of Citric Acid on Alcohol by Quality
+
+```{r echo=FALSE, Citric_Acid_vs_pH_by_Quality}
+#Take out the 1% outliers of citric.acid and alcohol data while reporting
+ggplot(aes(x = alcohol, y =citric.acid), data = redwine_cleansed) +
+  geom_jitter(aes(color=redwine_cleansed$cut_quality)) +
+  geom_smooth(method='lm',aes(group = 1)) +
+  coord_cartesian(
+    xlim=c(quantile(redwine_cleansed$alcohol,.01),
+           quantile(redwine_cleansed$alcohol,.99)),
+    ylim=c(quantile(redwine_cleansed$citric.acid,.01),
+           quantile(redwine_cleansed$citric.acid,.99))) +
+  geom_vline(xintercept =  mean(redwine_cleansed$alcohol), color='red',
+             linetype='dashed') +
+  geom_hline(yintercept = mean(redwine_cleansed$citric.acid), color='red',
+             linetype='dashed') +
+  xlab("Alcohol") +
+  ylab(" Citric Acid (g / dm^3") +
+  ggtitle("Citric Acid vs Alcohol by Quality")   
+
+
+```
+
+### Description
+Higher citric acid and higher alcohol( right upper quadrant) has most better quality. As we have seen in above bivariate analysis, individualy citric acid and alcohol have impact on quality. In this chart, we can see that when both are high, quality is better most of the time.
+
+As per google, Citric acid has many uses in wine production. Citric acid is a weak organic acid, which is often used as a natural preservative or additive to food or drink to add a sour taste to food. As we can see in above chart, less citric acid results in bad quality.
+
+
+
+# Reflection
+Never thought earlier that R charts can be so informative and easy to create at the same time. 
+
+Regarding this project, It was fun working on wine data. I was able to identify the key attributes that results in better wine quality. Single variable charts gave me good high level info. Bi-variable charts gave dependency among 2 attributes and able to identify key attributes using that. Using multi variable charts, I was able to find the dependencies among these attributes. Identified impact of alcohol,volatile.acidity  and citric.acid attributs to Quality.
+
+Working with more than one type of wine data ( Red & White wine data) would have made analysis and charts more interesting. More than one wine type data would have resulted in comparing the big impact attributes among those 2 wine types. 
+
+Great learning of R through exercises as well as project. 
